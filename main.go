@@ -82,6 +82,74 @@ func ParseNum(pr *PeekReader) (int, error) {
 	}	
 }
 
+// func (pr *PeekReader) ConsumeChar(r rune) error{
+// 	c,err := pr.Consume()
+// 	if err!= nil {
+// 		return err
+// 	}
+// 	if c!=r {
+// 		return FailedMatch
+// 	}
+// 	return nil
+// }
+
+func (pr *PeekReader) ParseChar(r rune) error{
+	c,err := pr.Peek()
+	if err!= nil {
+		return err
+	}
+	if c!=r {
+		return FailedMatch
+	}
+	_,_ = pr.Consume()
+
+	return nil
+}
+
+func (pr *PeekReader) ParseWord(word string) error {
+	for _, ch := range word {
+		if err := pr.ParseChar(ch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ParseMul(pr *PeekReader) (int, error) {
+	// Use the helper to parse "mul("
+	err := pr.ParseWord("mul(")
+	if err != nil {
+		return 0, err
+	}
+
+	// Parse the first number
+	a, err := ParseNum(pr)
+	if err != nil {
+		return 0, err
+	}
+
+	// Parse the comma
+	err = pr.ParseChar(',')
+	if err != nil {
+		return 0, err
+	}
+
+	// Parse the second number
+	b, err := ParseNum(pr)
+	if err != nil {
+		return 0, err
+	}
+
+	// Parse the closing parenthesis
+	err = pr.ParseChar(')')
+	if err != nil {
+		return 0, err
+	}
+
+	// Return the product of the two numbers
+	return a * b, nil
+}
+
 func main() {
 	// Open the file
     file, err := os.Open("input.txt")
@@ -93,21 +161,67 @@ func main() {
     defer file.Close() // Ensure the file is closed when the function exits
     reader := NewPeekReader(file)
 
+    enabled := true
+    sum:=0 
+    num:=0
     for {
-    	num,err := ParseNum(reader)
+    	if !enabled {
+    		goto do
+    	}
+
+    	num,err = ParseMul(reader)
     	if err==nil {
-    		fmt.Println("\nnum(",num,")")
+    		sum+=num
     		continue
+    	} else if err!=FailedMatch{
+    		break
     	}
-    	c,err := reader.Consume()
-    	if(err == io.EOF){
-    		return
-    	} else if err!=nil {
-    		fmt.Println("Error reading:", err)
-        	os.Exit(1)
+
+    do:
+    	err = reader.ParseWord("do")
+    	if err == FailedMatch {
+    		goto end
+    	} else if err != nil {
+    		break
     	}
-    	fmt.Print(string(c))
+    	
+    	err = reader.ParseChar('(')
+    	if err == FailedMatch {
+    		goto dont
+    	} else if err != nil {
+    		break
+    	}
+
+    	err = reader.ParseChar(')')
+    	if err == FailedMatch {
+    		goto end
+    	} else if err != nil {
+    		break
+    	}
+    	enabled = true
+    	continue
+
+    dont:
+    	err = reader.ParseWord("n't()")
+    	if err == FailedMatch {
+    		goto end
+    	} else if err != nil {
+    		break
+    	}
+    	enabled = false
+    	continue
+
+
+    end:
+    	_,_ = reader.Consume()
 
     }
+
+	if err!=io.EOF{
+		fmt.Println("Error reading:", err)
+    	os.Exit(1)
+	}
+
+   fmt.Println("ans:", sum)
 
 }
