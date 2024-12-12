@@ -5,6 +5,7 @@ import (
     "os"
     "bufio"
     "io"
+    "errors"
 )
 
 type PeekReader struct {
@@ -47,6 +48,40 @@ func (pr *PeekReader) Consume() (rune, error) {
 	return r, nil
 }
 
+var FailedMatch = errors.New("did not match the pattern")
+
+func isAsciiDigit(r rune) bool {
+	return r >= '0' && r <= '9'
+}
+
+func ParseNum(pr *PeekReader) (int, error) {
+	c,err := pr.Peek()
+	if err!= nil {
+		return 0,err
+	}
+	if !isAsciiDigit(c){
+		return 0,FailedMatch
+	}
+
+	_,_ = pr.Consume()
+	num := int(c-'0')
+
+	for {
+		c,err := pr.Peek()
+		if err==io.EOF {
+			return num,nil
+		}
+		if err!= nil {
+			return num,err
+		}
+		if!isAsciiDigit(c){
+			return num,nil
+		}
+		_,_ = pr.Consume()
+		num = 10*num+int(c-'0')
+	}	
+}
+
 func main() {
 	// Open the file
     file, err := os.Open("input.txt")
@@ -59,6 +94,11 @@ func main() {
     reader := NewPeekReader(file)
 
     for {
+    	num,err := ParseNum(reader)
+    	if err==nil {
+    		fmt.Println("\nnum(",num,")")
+    		continue
+    	}
     	c,err := reader.Consume()
     	if(err == io.EOF){
     		return
