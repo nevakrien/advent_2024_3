@@ -27,7 +27,7 @@ func (pr *PeekReader) Peek() (rune, error) {
 	}
 	r, _, err := pr.reader.ReadRune()
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 	pr.peeked = r
 	pr.peekedValid = true
@@ -42,7 +42,7 @@ func (pr *PeekReader) Consume() (rune, error) {
 	}
 	r, _, err := pr.reader.ReadRune()
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 	return r, nil
 }
